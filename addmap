@@ -72,6 +72,7 @@ my $SlashPos = rindex($MapUrl, "/") + 1;
 my $MapFile = substr($MapUrl, $SlashPos);
 print "MapFile = $MapFile\n";
 
+my $NumMaps = 0;
 my @ziplistlines = `$ZIPLISTCMD $MapFile | grep arena/maps | grep \.bsp`;
 while(@ziplistlines)
 {
@@ -82,8 +83,15 @@ while(@ziplistlines)
 	my $MapName = substr($FileLine, $SlashPos);
 	print "Saw Map Name: $MapName\n";
 	push(@MapNames, $MapName);
+	$NumMaps++;
 }
+print "Saw $NumMaps maps in archive\n";
 
+if ($NumMaps == 0)
+{
+	print "No maps found in archive - aborting\n";
+	exit 0;
+}
 # Extract the files
 system("$ZIPEXTRACTCMD $MapFile");
 print "Maps Extracted\n";
