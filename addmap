@@ -14,21 +14,33 @@ my $MAPS_LIST = "";
 
 # No changes below here
 
-my $VERSION = "0.1";
+my $VERSION = "0.2";
 my $NumArgs = $#ARGV + 1;
 my @MapNames = ();
 my @OrigMaps = ();
 my $FH = "";
+my $WantMode = "";
 
 print "addmap v$VERSION\n";
 print "=============\n";
-if ($NumArgs != 1)
+if (($NumArgs != 1) && ($NumArgs != 2))
 {
-	print "Usage:\n addmap \<URL TO MAP\>\n";
+	print "Usage:\n addmap \<URL TO MAP\> \[servercfg\]\n";
 	exit 0;
 }
 my $MapUrl = $ARGV[0];
+my $ServerConf = "";
+if ($NumArgs == 2)
+{
+	$ServerConf = $ARGV[1];
+}
+else
+{
+	$ServerConf = "server.cfg";
+}
+
 print "Map URL: $MapUrl\n";
+print "Server Config: $ServerConf\n";
 
 if (substr($MapUrl, 0, 4) ne "http")
 {
@@ -59,6 +71,20 @@ else
         close ($FH);
 }
 
+my $SERVERCONFIGFILE = "$MAP_PATH/arena/$ServerConf";
+my @GameMode = `grep \"set ctf 1\" $SERVERCONFIGFILE`;
+
+# print "GameMode = '@GameMode'\n";
+if (@GameMode)
+{
+	$WantMode = "ctf";
+}
+else
+{
+	$WantMode = "dm";
+}
+print "Mode: $WantMode\n";
+
 if (substr($MapUrl, -4) ne ".zip")
 {
 	print "That file doesn't seem to be a zip file: $MapUrl\n";
@@ -86,8 +112,26 @@ while(@ziplistlines)
 	my $MapName = substr($FileLine, $SlashPos);
 	$MapName = substr($MapName, 0, length($MapName) - 4);
 	print "Saw Map Name: $MapName\n";
-	push(@MapNames, $MapName);
-	$NumMaps++;
+	if (substr($MapName, 0, 2) eq "ct")
+	{
+		if ($WantMode eq "ctf")
+		{
+			push(@MapNames, $MapName);
+			$NumMaps++;
+		}
+	}
+	elsif (substr($MapName, 0, 2) eq "dm")
+	{
+		if ($WantMode eq "dm")
+		{
+			push(@MapNames, $MapName);
+			$NumMaps++;
+		}
+	}
+	else
+	{
+		print "Saw unknown map type: $MapName\n";
+	}
 }
 print "Saw $NumMaps maps in archive\n";
 
@@ -140,7 +184,6 @@ close ($FH);
 
 system("mv $MAPLISTFILE-new $MAPLISTFILE");
 
-my $SERVERCONFIGFILE = "$MAP_PATH/arena/server.cfg";
 my $maplist = "";
 open($FH, '<', $SERVERCONFIGFILE) or die "Could not open file '$SERVERCONFIGFILE' for reading $!";
 open($FH2, '>', "$SERVERCONFIGFILE-new") or die "Could not create file '$SERVERCONFIGFILE-new' $!";
