@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+#
+# Download and install Alien Arena maps
+#
+
+
+my $ZIPCMD = "";
+my $ZIPEXT = "";
+my $FILETYPE = $ARGV[0];
+my $ZIPFORMAT = $ARGV[1];
+my $REMOVE_ORIG = "";
+my $VERSION = "0.1";
+my $DOWNLOADCOMMAND = "/usr/bin/wget";
+my $HOMEDIR = $ENV{HOME};
+my $PREFFILE = "$HOMEDIR/.addmaprc";
+my $MAP_PATH = "";
+
+# No changes below here
+
+my $NumArgs = $#ARGV + 1;
+
+print "addmap v$VERSION\n";
+print "=============\n";
+if ($NumArgs != 1)
+{
+	print "Usage:\n addmap \<URL TO MAP\>\n";
+	exit 0;
+}
+my $MapUrl = $ARGV[0];
+print "Map URL: $MapUrl\n";
+
+if (substr($MapUrl, 0, 4) ne "http")
+{
+	print "$MapUrl doesn't seem to be a URL\n";
+	exit 0;
+}
+
+if (! -f $PREFFILE)
+{
+	print "Prefs not found, creating.\n";
+	print "What is the path to the Alien Arena maps folder: ";
+	$MAP_PATH = <stdin>;
+	chop($MAP_PATH);
+	print "Map Path = '$MAP_PATH'\n";
+	open(my $FH, '>', $PREFFILE) or die "Could not create file '$PREFFILE' $!";
+	print $FH "$MAP_PATH\n";
+	close ($FH);
+}
+else
+{
+        open(my $FH, '<', $PREFFILE) or die "Could not open file '$PREFFILE' $!";
+	while (<$FH>)
+	{
+		chop();
+		$MAP_PATH = $_;
+	}
+        print "Map Path = $MAP_PATH\n";
+        close ($FH);
+}
+
+
+# Download the map file
+system("$DOWNLOADCOMMAND $MapUrl");
+my $SlashPos = rindex($MapUrl, "/") + 1;
+my $MapFile = substr($MapUrl, $SlashPos);
+print "MapFile = $MapFile\n";
+exit 0;
+
+if ($FILETYPE eq "")
+{
+	print("Usage:\nzipup \<FILE TYPE\> \<COMPRESSION TYPE\> \[remove\]\n");
+	print("COMPRESSION TYPE: zip | 7z | ciso\n");
+	print("remove: delete the original file after compression\n");
+	exit 1;
+}
+print ("Processing file type = $FILETYPE\n");
+
+if ($ZIPFORMAT eq "zip")
+{
+	$ZIPCMD = "/usr/bin/zip -9";
+	$ZIPEXT = "zip";
+	print ("Compressing with ZIP\n");
+}
+elsif ($ZIPFORMAT eq "7z")
+{
+	$ZIPCMD = "/usr/bin/7z a";
+	$ZIPEXT = "7z";
+	print ("Compressing with 7ZIP\n");
+}
+elsif ($ZIPFORMAT eq "ciso")
+{
+	$ZIPCMD = "/usr/bin/ciso 9";
+	$ZIPEXT = "cso";
+	print ("Compressing with ciso\n");
+}
+else
+{
+	print("You must specify a compression format:\nzip\n7z\nciso\n");
+	exit (1);
+}
+
+if ($REMOVE_ORIG ne "")
+{
+	print("Deleting source after compression\n");
+}
+
+my $TYPELEN = length($FILETYPE);
+
+my $dirname = '.';
+opendir(DIR, $dirname) or die "Could not open the directory $dirname\n";
+
+while (my $filename = readdir(DIR))
+{
+#	print "$filename\n";
+	if (substr($filename, -$TYPELEN) eq $FILETYPE)
+	{
+		print "File $filename matched\n";
+		if ($ZIPFORMAT eq "ciso")
+		{
+			system("$ZIPCMD \"$filename\" \"$filename.$ZIPEXT\"");
+			if ($REMOVE_ORIG ne "")
+			{
+				print "Deleting original $FILETYPE file...\n";
+				unlink($filename);
+			}
+		}
+		else
+		{
+			system("$ZIPCMD \"$filename.$ZIPEXT\" \"$filename\"");
+			if ($REMOVE_ORIG ne "")
+			{
+				print "Deleting original $FILETYPE file...\n";
+				unlink($filename);
+			}
+		}
+	}
+}
+
+closedir(DIR);
+
+exit 0;
