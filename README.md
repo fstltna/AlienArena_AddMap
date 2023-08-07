@@ -7,6 +7,7 @@ Suggest putting this folder into your path like this:
 
 To add a map pack do it like this:
 
-    addmap <URL FOR MAP>
+    addmap <URL FOR MAP> [server.cfg]
 
+If you leave the "server.cfg" part off it will use the default config file. If you specify that option it will use that specified config file instead.
 
