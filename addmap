@@ -5,6 +5,8 @@
 
 
 my $DOWNLOADCOMMAND = "/usr/bin/wget";
+my $ZIPLISTCMD = "/usr/bin/unzip -l";
+my $ZIPEXTRACTCMD = "/usr/bin/unzip";
 my $HOMEDIR = $ENV{HOME};
 my $PREFFILE = "$HOMEDIR/.addmaprc";
 my $MAP_PATH = "";
@@ -13,6 +15,7 @@ my $MAP_PATH = "";
 
 my $VERSION = "0.1";
 my $NumArgs = $#ARGV + 1;
+my @MapNames = ();
 
 print "addmap v$VERSION\n";
 print "=============\n";
@@ -33,7 +36,7 @@ if (substr($MapUrl, 0, 4) ne "http")
 if (! -f $PREFFILE)
 {
 	print "Prefs not found, creating.\n";
-	print "What is the path to the Alien Arena maps folder: ";
+	print "What is the path to the Alien Arena folder: ";
 	$MAP_PATH = <stdin>;
 	chop($MAP_PATH);
 	print "Map Path = '$MAP_PATH'\n";
@@ -59,10 +62,29 @@ if (substr($MapUrl, -4) ne ".zip")
 	exit 0;
 }
 
+# Change to alien arena folder
+chdir($MAP_PATH);
+
 # Download the map file
 system("$DOWNLOADCOMMAND \"$MapUrl\"");
+# Get the standalone zip file
 my $SlashPos = rindex($MapUrl, "/") + 1;
 my $MapFile = substr($MapUrl, $SlashPos);
 print "MapFile = $MapFile\n";
 
+my @ziplistlines = `$ZIPLISTCMD $MapFile | grep arena/maps | grep \.bsp`;
+while(@ziplistlines)
+{
+	my $FileLine = shift @ziplistlines;
+	chop($FileLine);
+	#print "Saw line '$FileLine'\n";
+	$SlashPos = rindex($FileLine, "/") + 1;
+	my $MapName = substr($FileLine, $SlashPos);
+	print "Saw Map Name: $MapName\n";
+	push(@MapNames, $MapName);
+}
+
+# Extract the files
+system("$ZIPEXTRACTCMD $MapFile");
+print "Maps Extracted\n";
 exit 0;
