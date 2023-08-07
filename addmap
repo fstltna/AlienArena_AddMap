@@ -58,6 +58,11 @@ else
         close ($FH);
 }
 
+if (substr($MapUrl, -4) ne ".zip")
+{
+	print "That file doesn't seem to be a zip file: $MapUrl\n";
+	exit 0;
+}
 
 # Download the map file
 system("$DOWNLOADCOMMAND $MapUrl");
