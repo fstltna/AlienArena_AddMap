@@ -84,6 +84,7 @@ while(@ziplistlines)
 	#print "Saw line '$FileLine'\n";
 	$SlashPos = rindex($FileLine, "/") + 1;
 	my $MapName = substr($FileLine, $SlashPos);
+	$MapName = substr($MapName, 0, length($MapName) - 4);
 	print "Saw Map Name: $MapName\n";
 	push(@MapNames, $MapName);
 	$NumMaps++;
@@ -100,7 +101,6 @@ system("$ZIPEXTRACTCMD $MapFile");
 print "Maps Extracted\n";
 
 my $MAPLISTFILE = "$MAP_PATH/arena/maps.lst";
-
 open($FH, '<', $MAPLISTFILE) or die "Could not open file '$MAPLISTFILE' for reading $!";
 while(<$FH>)
 {
@@ -123,20 +123,56 @@ foreach (@OrigMaps)
 {
 	print $FH "$_\n";
 }
+my @EditedList = ();
 foreach (@MapNames)
 {
 	my $CurMap = $_;
 	if (grep(/$CurMap/, @OrigMaps))
 	{
-		print "Already had map $CurMap in list - skipping\n";
+		print "Already had map $CurMap installed - skipping\n";
 		next;
 	}
-	print $FH "$CurMap\n";
+	print $FH "$CurMap \"$CurMap\"\n";
+	push(@EditedList, $CurMap);
 }
 print $FH "0\n";
 close ($FH);
 
-exit 0;
 system("mv $MAPLISTFILE-new $MAPLISTFILE");
+
+my $SERVERCONFIGFILE = "$MAP_PATH/arena/server.cfg";
+my $maplist = "";
+open($FH, '<', $SERVERCONFIGFILE) or die "Could not open file '$SERVERCONFIGFILE' for reading $!";
+open($FH2, '>', "$SERVERCONFIGFILE-new") or die "Could not create file '$SERVERCONFIGFILE-new' $!";
+while(<$FH>)
+{
+	chop();
+	my $EndChar = substr($_, -1);
+	if ($EndChar eq "\r")
+	{
+		chop($_);
+	}
+
+	if (substr($_, 0, 14) ne "set sv_maplist")
+	{
+		print $FH2 "$_\n";
+		next;
+	}
+	# print "Saw maplist line\n";
+	$maplist = $_;
+	chop ($maplist);
+	foreach (@EditedList)
+	{
+		$maplist = "$maplist $_";
+	}
+	$maplist = "$maplist\"";
+	print $FH2 "$maplist\n";
+}
+# print "maplist: $maplist\n";
+close ($FH);
+close ($FH2);
+
+# Overwrite the previous config
+system("mv $SERVERCONFIGFILE-new $SERVERCONFIGFILE");
 
 exit 0;
