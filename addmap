@@ -10,12 +10,15 @@ my $ZIPEXTRACTCMD = "/usr/bin/unzip";
 my $HOMEDIR = $ENV{HOME};
 my $PREFFILE = "$HOMEDIR/.addmaprc";
 my $MAP_PATH = "";
+my $MAPS_LIST = "";
 
 # No changes below here
 
 my $VERSION = "0.1";
 my $NumArgs = $#ARGV + 1;
 my @MapNames = ();
+my @OrigMaps = ();
+my $FH = "";
 
 print "addmap v$VERSION\n";
 print "=============\n";
@@ -40,13 +43,13 @@ if (! -f $PREFFILE)
 	$MAP_PATH = <stdin>;
 	chop($MAP_PATH);
 	print "Map Path = '$MAP_PATH'\n";
-	open(my $FH, '>', $PREFFILE) or die "Could not create file '$PREFFILE' $!";
+	open($FH, '>', $PREFFILE) or die "Could not create file '$PREFFILE' $!";
 	print $FH "$MAP_PATH\n";
 	close ($FH);
 }
 else
 {
-        open(my $FH, '<', $PREFFILE) or die "Could not open file '$PREFFILE' $!";
+        open($FH, '<', $PREFFILE) or die "Could not open file '$PREFFILE' $!";
 	while (<$FH>)
 	{
 		chop();
@@ -95,4 +98,45 @@ if ($NumMaps == 0)
 # Extract the files
 system("$ZIPEXTRACTCMD $MapFile");
 print "Maps Extracted\n";
+
+my $MAPLISTFILE = "$MAP_PATH/arena/maps.lst";
+
+open($FH, '<', $MAPLISTFILE) or die "Could not open file '$MAPLISTFILE' for reading $!";
+while(<$FH>)
+{
+	chop();
+	my $EndChar = substr($_, -1);
+	if ($EndChar eq "\r")
+	{
+		chop($_);
+	}
+
+	if ($_ ne "0")
+	{
+		push(@OrigMaps, $_);
+	}
+}
+close ($FH);
+
+open($FH, '>', "$MAPLISTFILE-new") or die "Could not create file '$MAPLISTFILE-new' $!";
+foreach (@OrigMaps)
+{
+	print $FH "$_\n";
+}
+foreach (@MapNames)
+{
+	my $CurMap = $_;
+	if (grep(/$CurMap/, @OrigMaps))
+	{
+		print "Already had map $CurMap in list - skipping\n";
+		next;
+	}
+	print $FH "$CurMap\n";
+}
+print $FH "0\n";
+close ($FH);
+
+exit 0;
+system("mv $MAPLISTFILE-new $MAPLISTFILE");
+
 exit 0;
